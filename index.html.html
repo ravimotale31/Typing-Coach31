@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BHC Clerk Typing Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+/* ======================================================================
+   THEME TOKENS — light is default, [data-theme="dark"] overrides below
+   ====================================================================== */
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#EEF0F4; --border:#DFE3EA;
+  --text:#181B21; --text-soft:#5C6370; --text-faint:#8A90A0;
+  --accent:#2F6FED; --accent-soft:#E7EFFE; --accent-text:#1B4FC4;
+  --good:#188A54; --good-soft:#E4F7ED; --bad:#D0342C; --bad-soft:#FDEAE9;
+  --warn:#B4740E; --warn-soft:#FBF0DD;
+  --font-ui:'Inter',system-ui,sans-serif; --font-mono:'JetBrains Mono',monospace;
+  --radius:10px; --shadow:0 2px 10px rgba(20,25,35,.06);
+}
+[data-theme="dark"]{
+  --bg:#12151B; --surface:#1A1E26; --surface-2:#212630; --border:#2B313D;
+  --text:#E8EAED; --text-soft:#A2A8B4; --text-faint:#6B7280;
+  --accent:#5B8DEF; --accent-soft:#1E2A44; --accent-text:#8FB2FA;
+  --good:#3ECF8E; --good-soft:#173226; --bad:#FF6B6B; --bad-soft:#3A1E1E;
+  --warn:#F0A94B; --warn-soft:#3A2E14;
+  --shadow:0 2px 16px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--font-ui);
+  min-height:100vh; transition:background .15s,color .15s;
+}
+.hidden{display:none !important;}
+button{font-family:var(--font-ui); cursor:pointer;}
+input,textarea,select{font-family:var(--font-ui);}
+
+/* ============================= LAYOUT ============================= */
+header.topbar{
+  position:sticky; top:0; z-index:30; background:var(--surface);
+  border-bottom:1px solid var(--border); padding:10px 22px;
+  display:flex; align-items:center; gap:18px;
+}
+.brand{font-weight:800; font-size:16px; letter-spacing:-.01em;}
+.brand span{color:var(--accent);}
+nav.tabs{display:flex; gap:4px; flex:1; overflow-x:auto;}
+nav.tabs button{
+  background:transparent; border:none; color:var(--text-soft); padding:8px 14px;
+  border-radius:8px; font-size:13.5px; font-weight:600; white-space:nowrap;
+}
+nav.tabs button.active{background:var(--accent-soft); color:var(--accent-text);}
+nav.tabs button:hover{background:var(--surface-2);}
+.top-actions{display:flex; gap:8px; align-items:center;}
+.icon-btn{
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+  width:36px; height:36px; border-radius:8px; font-size:15px; display:flex;
+  align-items:center; justify-content:center;
+}
+.icon-btn:hover{background:var(--border);}
+
+main{max-width:1080px; margin:0 auto; padding:26px 20px 70px;}
+.screen{animation:fade .15s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+.grid{display:grid; gap:16px;}
+.grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.grid.cols-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:760px){.grid.cols-3,.grid.cols-2{grid-template-columns:1fr;}}
+
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:20px;
+}
+.card h3{margin:0 0 4px; font-size:15px;}
+.card .big{font-family:var(--font-mono); font-size:30px; font-weight:700;}
+.card .sub{color:var(--text-soft); font-size:12.5px;}
+.section-title{font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); margin:28px 0 12px;}
+
+/* mode cards */
+.mode-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px; text-align:left; box-shadow:var(--shadow); transition:.12s;
+}
+.mode-card:hover{border-color:var(--accent); transform:translateY(-2px);}
+.mode-card .tag{
+  display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase;
+  color:var(--accent-text); background:var(--accent-soft); padding:2px 8px; border-radius:6px; margin-bottom:8px;
+}
+.mode-card h4{margin:0 0 6px; font-size:16px;}
+.mode-card p{margin:0; font-size:13px; color:var(--text-soft); line-height:1.5;}
+
+.btn{
+  border:none; border-radius:8px; padding:11px 20px; font-weight:700; font-size:13.5px;
+}
+.btn-accent{background:var(--accent); color:#fff;}
+.btn-accent:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--surface-2); color:var(--text); border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--border);}
+.btn-bad{background:var(--bad-soft); color:var(--bad); border:1px solid var(--bad);}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.actions{display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;}
+
+/* ============================ DASHBOARD ============================ */
+.motivation{
+  background:linear-gradient(120deg,var(--accent-soft),transparent); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; font-size:14.5px;
+}
+.motivation b{color:var(--accent-text);}
+.routine-box{display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;}
+.schedule-list{list-style:none; margin:0; padding:0;}
+.schedule-list li{
+  display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px;
+}
+.schedule-list li.today{color:var(--accent-text); font-weight:700;}
+.schedule-list li:last-child{border-bottom:none;}
+
+/* ============================ TYPING SESSION ============================ */
+#screen-session{position:fixed; inset:0; background:var(--bg); z-index:40; overflow-y:auto;}
+.session-top{
+  display:flex; justify-content:space-between; align-items:center; padding:14px 24px;
+  border-bottom:1px solid var(--border); background:var(--surface);
+}
+.session-stats{display:flex; gap:22px; font-family:var(--font-mono);}
+.sstat{text-align:center;}
+.sstat .v{font-size:19px; font-weight:700;}
+.sstat .l{font-size:10px; color:var(--text-faint); text-transform:uppercase;}
+.sstat.timer.low .v{color:var(--bad);}
+.session-body{max-width:840px; margin:0 auto; padding:40px 24px;}
+.passage-box{
+  font-family:var(--font-mono); font-size:22px; line-height:2.1; color:var(--text-faint);
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:30px; box-shadow:var(--shadow); user-select:none;
+  max-height:46vh; overflow-y:auto; scroll-behavior:auto;
+}
+.wword{border-radius:4px; padding:1px 0;}
+.wword.active-word{background:var(--accent-soft);}
+.ch.correct{color:var(--good);}
+.ch.incorrect{color:var(--bad); background:var(--bad-soft); border-radius:2px;}
+.ch{position:relative;}
+.ch.cursor::before{
+  content:""; position:absolute; left:-1px; top:1px; bottom:1px; width:2px;
+  background:var(--accent); animation:caretBlink 1s step-end infinite;
+}
+@keyframes caretBlink{0%,100%{opacity:1;}50%{opacity:0;}}
+.type-input{position:absolute; opacity:0; height:1px; width:1px; pointer-events:none;}
+.session-footer{text-align:center; margin-top:18px; color:var(--text-faint); font-size:12.5px;}
+.flash-warn{
+  position:fixed; top:16px; left:50%; transform:translateX(-50%) translateY(-12px);
+  background:var(--bad); color:#fff; padding:8px 16px; border-radius:8px; font-size:12.5px;
+  font-weight:700; opacity:0; transition:.15s; z-index:60; pointer-events:none;
+}
+.flash-warn.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.metronome-dot{
+  width:14px; height:14px; border-radius:50%; background:var(--border); transition:.05s;
+  display:inline-block; margin-left:8px; vertical-align:middle;
+}
+.metronome-dot.beat{background:var(--accent); transform:scale(1.3);}
+
+body.focus-mode header.topbar,
+body.focus-mode .session-top .session-stats ~ .row,
+body.focus-mode .kb-map{display:none;}
+body.focus-mode .session-top{justify-content:center;}
+
+/* keyboard finger map */
+.kb-map{margin-top:22px; display:flex; flex-direction:column; align-items:center; gap:6px;}
+.kb-row{display:flex; gap:5px;}
+.kb-key{
+  width:38px; height:38px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:12px; font-weight:600; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--text-soft);
+}
+.kb-key.f-left-pinky{background:#FCE4E4;color:#8a1f1f;} .kb-key.f-left-ring{background:#FDECD1;color:#8a5a1f;}
+.kb-key.f-left-middle{background:#FBF6D2;color:#7a6b1f;} .kb-key.f-left-index{background:#E1F5E4;color:#1f6b32;}
+.kb-key.f-right-index{background:#DDEEFB;color:#1f4d8a;} .kb-key.f-right-middle{background:#E9E0FA;color:#4a1f8a;}
+.kb-key.f-right-ring{background:#FADCEE;color:#8a1f6b;} .kb-key.f-right-pinky{background:#F5DCE4;color:#8a1f45;}
+[data-theme="dark"] .kb-key{filter:brightness(.55) saturate(1.3);}
+
+/* ============================ RESULTS ============================ */
+.docket{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px;}
+@media(max-width:700px){.docket{grid-template-columns:repeat(2,1fr);}}
+.dcell{background:var(--surface); padding:16px 10px; text-align:center;}
+.dcell .v{font-family:var(--font-mono); font-size:23px; font-weight:700;}
+.dcell .v.good{color:var(--good);} .dcell .v.bad{color:var(--bad);}
+.dcell .k{font-size:11px; color:var(--text-faint); text-transform:uppercase; margin-top:3px;}
+.wordchip{display:inline-block; font-family:var(--font-mono); font-size:13px; background:var(--bad-soft); color:var(--bad); padding:3px 9px; border-radius:6px; margin:3px;}
+.wordchip.missing{background:var(--warn-soft); color:var(--warn);}
+.wordchip small{opacity:.7; margin-left:4px;}
+
+/* ============================ NOTEBOOK / PROGRESS ============================ */
+.weakword-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-family:var(--font-mono); font-size:14px;}
+.weakword-row .cnt{background:var(--bad-soft); color:var(--bad); border-radius:6px; padding:1px 8px; font-size:12px;}
+table.hist{width:100%; border-collapse:collapse; font-size:13px;}
+table.hist th,table.hist td{padding:9px 8px; border-bottom:1px solid var(--border); text-align:center;}
+table.hist th{color:var(--text-faint); font-size:11px; text-transform:uppercase;}
+.bars{display:flex; align-items:flex-end; gap:8px; height:120px; margin:16px 0;}
+.barcol{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;}
+.bar{width:100%; max-width:26px; background:var(--accent); border-radius:4px 4px 0 0; transition:.2s;}
+.bar.acc{background:var(--good);}
+.barcol .lbl{font-size:10px; color:var(--text-faint);}
+.goal-gauge{height:10px; background:var(--surface-2); border-radius:6px; overflow:hidden; margin-top:8px;}
+.goal-gauge .fill{height:100%; background:var(--accent); transition:.3s;}
+
+/* ============================ MODAL ============================ */
+.modal-backdrop{position:fixed; inset:0; background:rgba(10,12,16,.55); z-index:80; display:flex; align-items:center; justify-content:center;}
+.modal{background:var(--surface); border-radius:14px; padding:30px; max-width:420px; width:90%; text-align:center; box-shadow:var(--shadow);}
+.breath-circle{
+  width:120px; height:120px; border-radius:50%; background:var(--accent-soft); border:2px solid var(--accent);
+  margin:20px auto; animation:breathe 12s ease-in-out infinite;
+}
+@keyframes breathe{0%{transform:scale(.7);}33%{transform:scale(1.15);}66%{transform:scale(1.15);}100%{transform:scale(.7);}}
+.breath-label{font-family:var(--font-mono); font-size:13px; color:var(--text-soft);}
+
+textarea.pastebox{width:100%; min-height:110px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:10px; font-family:var(--font-mono); font-size:13px;}
+select, .num-input{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:8px 10px; font-size:13.5px;}
+label.small{font-size:11.5px; font-weight:700; text-transform:uppercase; color:var(--text-faint); display:block; margin-bottom:6px;}
+</style>
+</head>
+<body>
+
+<div class="flash-warn" id="flashWarn">Backspace disabled</div>
+
+<!-- ===================== HEADER / NAV ===================== -->
+<header class="topbar">
+  <div class="brand">BHC <span>Clerk</span> Typing Coach</div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="practice">Practice</button>
+    <button data-tab="notebook">Notebook</button>
+    <button data-tab="progress">Progress</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <div class="top-actions">
+    <button class="icon-btn" id="themeToggle" title="Toggle dark/light">🌙</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="screen" id="tab-dashboard">
+    <div class="motivation" id="motivationLine"></div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="routine-box">
+        <div>
+          <h3>Today's Target</h3>
+          <div class="sub" id="todayTarget"></div>
+        </div>
+        <button class="btn btn-ghost" id="openBreathBtn">Start 60-second calm routine</button>
+      </div>
+    </div>
+
+    <div class="grid cols-3">
+      <div class="card"><h3>Last Mock — Net WPM</h3><div class="big" id="dLastWpm">–</div><div class="sub">Goal: <span id="dGoalWpm"></span>+</div></div>
+      <div class="card"><h3>Last Mock — Errors</h3><div class="big" id="dLastErr">–</div><div class="sub">Goal: ≤ <span id="dGoalErr"></span></div></div>
+      <div class="card"><h3>Last Mock — Accuracy</h3><div class="big" id="dLastAcc">–</div><div class="sub">Goal: <span id="dGoalAcc"></span>%+</div></div>
+    </div>
+
+    <div class="section-title">This Week's Focus</div>
+    <div class="card">
+      <ul class="schedule-list" id="scheduleList"></ul>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-accent" id="quickMockBtn">Start Today's Timed Mock</button>
+    </div>
+  </section>
+
+  <!-- ===================== PRACTICE HUB ===================== -->
+  <section class="screen hidden" id="tab-practice">
+    <div class="section-title">Practice Modes</div>
+    <div class="grid cols-3" id="modeGrid"></div>
+  </section>
+
+  <!-- ===================== NOTEBOOK ===================== -->
+  <section class="screen hidden" id="tab-notebook">
+    <div class="section-title">Weak Words — Ranked by Frequency</div>
+    <div class="card">
+      <div id="weakList"></div>
+      <div class="actions">
+        <button class="btn btn-accent" id="drillWeakBtn">Practice My Weak Words</button>
+        <button class="btn btn-ghost" id="clearWeakBtn">Clear List</button>
+      </div>
+    </div>
+
+    <div class="section-title">Add Your Own Error Words</div>
+    <div class="card">
+      <label class="small">Paste words (comma or newline separated)</label>
+      <textarea class="pastebox" id="pasteWords" placeholder="e.g. jurisdiction, respondent, notwithstanding"></textarea>
+      <div class="actions"><button class="btn btn-accent" id="addPasteBtn">Add to Weak Words</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== PROGRESS ===================== -->
+  <section class="screen hidden" id="tab-progress">
+    <div class="section-title">Progress Toward Goal (≤ <span id="pGoalErr"></span> errors)</div>
+    <div class="card">
+      <div class="sub" id="goalProgressText"></div>
+      <div class="goal-gauge"><div class="fill" id="goalFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="section-title">Last 10 Mocks — WPM &amp; Accuracy Trend</div>
+    <div class="card">
+      <div class="bars" id="wpmBars"></div>
+    </div>
+
+    <div class="section-title">Full History</div>
+    <div class="card">
+      <table class="hist" id="histTable"></table>
+      <div class="actions"><button class="btn btn-ghost" id="exportBtn">Export Results as Text</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section class="screen hidden" id="tab-settings">
+    <div class="section-title">Goals</div>
+    <div class="card grid cols-3">
+      <div><label class="small">Target Net WPM</label><input class="num-input" type="number" id="setGoalWpm" style="width:100%;"></div>
+      <div><label class="small">Max Errors (≤)</label><input class="num-input" type="number" id="setGoalErr" style="width:100%;"></div>
+      <div><label class="small">Target Accuracy %</label><input class="num-input" type="number" id="setGoalAcc" style="width:100%;"></div>
+    </div>
+    <div class="actions"><button class="btn btn-accent" id="saveGoalsBtn">Save Goals</button></div>
+
+    <div class="section-title">Data</div>
+    <div class="card">
+      <p class="sub">Everything (history, weak words, goals, theme) is stored only in this browser via localStorage. Nothing is sent anywhere.</p>
+      <div class="actions"><button class="btn btn-bad" id="resetAllBtn">Reset All Data</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTS ===================== -->
+  <section class="screen hidden" id="tab-results">
+    <div class="section-title" id="resultsTitle">Result</div>
+    <div class="docket" id="resultDocket"></div>
+
+    <div class="section-title">Keystroke Breakdown</div>
+    <div class="docket" id="keystrokeDocket"></div>
+
+    <div class="section-title">Wrong Words <span class="sub" style="text-transform:none;">— spelled incorrectly</span></div>
+    <div class="card" id="wrongWordsCard"><span class="sub">None — clean run.</span></div>
+
+    <div class="section-title">Missing Words <span class="sub" style="text-transform:none;">— never typed (skipped over, or time ran out)</span></div>
+    <div class="card" id="missingWordsCard"><span class="sub">None — you finished the passage.</span></div>
+
+    <div class="section-title">Extra Words <span class="sub" style="text-transform:none;">— stray keystrokes that split a word in two</span></div>
+    <div class="card" id="extraWordsCard"><span class="sub">None.</span></div>
+
+    <div class="section-title">Coach Notes</div>
+    <div class="card"><ul id="coachNotes" style="margin:0; padding-left:18px; line-height:1.7; font-size:14px;"></ul></div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" id="resultsExportBtn">Export This Result</button>
+      <button class="btn btn-accent" id="resultsRetryBtn">Back to Practice</button>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== TYPING SESSION (fullscreen) ===================== -->
+<div id="screen-session" class="hidden">
+  <div class="session-top">
+    <div class="session-stats">
+      <div class="sstat timer" id="sTimer"><div class="v">--:--</div><div class="l">Time</div></div>
+      <div class="sstat"><div class="v" id="sWpm">0</div><div class="l">Net WPM</div></div>
+      <div class="sstat"><div class="v" id="sAcc">100%</div><div class="l">Accuracy</div></div>
+      <div class="sstat"><div class="v" id="sErr">0</div><div class="l">Errors</div></div>
+    </div>
+    <div class="row">
+      <label class="small" style="margin:0;">Metronome <span class="metronome-dot" id="metroDot"></span></label>
+      <button class="icon-btn" id="metroToggle" title="Toggle metronome">🎵</button>
+      <button class="icon-btn" id="focusToggle" title="Focus mode">▣</button>
+      <button class="btn btn-ghost" id="exitSessionBtn">Exit</button>
+      <button class="btn btn-accent" id="submitSessionBtn">Submit Now</button>
+    </div>
+  </div>
+  <div class="session-body">
+    <div class="passage-box" id="passageBox"></div>
+    <div class="session-footer" id="sessionModeLabel"></div>
+    <div class="kb-map" id="kbMap"></div>
+    <textarea class="type-input" id="typeInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<!-- ===================== BREATHING MODAL ===================== -->
+<div class="modal-backdrop hidden" id="breathModal">
+  <div class="modal">
+    <h3>Pre-Practice Calm Routine</h3>
+    <div class="breath-circle"></div>
+    <div class="breath-label">Inhale 4s · Hold 4s · Exhale 4s — repeat 3 times</div>
+    <p class="sub" style="margin-top:14px;">If a stray thought shows up mid-test, don't fight it — just notice it and return your eyes to the next word. One error is one word, never the whole passage.</p>
+    <div class="actions" style="justify-content:center;">
+      <button class="btn btn-ghost" id="skipBreathBtn">Skip</button>
+      <button class="btn btn-accent" id="doneBreathBtn">I'm Ready</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CUSTOM PASSAGE MODAL (paste or upload PDF/.txt) ===================== -->
+<div class="modal-backdrop hidden" id="customModal">
+  <div class="modal" style="max-width:540px;">
+    <h3>Add a Passage</h3>
+    <p class="sub">Upload a PDF or .txt file, or just paste text — either way it lands in the box below so you can trim it before you start.</p>
+    <label class="small" style="margin-top:16px;">Upload PDF or .txt</label>
+    <input type="file" id="passageFile" accept=".pdf,.txt" style="width:100%; margin-bottom:6px;">
+    <div class="sub" id="pdfStatus" style="min-height:16px; margin-bottom:8px;"></div>
+    <label class="small">Passage Text</label>
+    <textarea class="pastebox" id="customPassageText" style="min-height:170px;" placeholder="Paste your passage here, or upload a file above..."></textarea>
+    <div class="actions" style="justify-content:center;">
+      <button class="btn btn-ghost" id="cancelCustomBtn">Cancel</button>
+      <button class="btn btn-accent" id="useCustomBtn">Start Practice</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   BHC CLERK TYPING COACH — vanilla JS, single file, localStorage only
+   Sections: constants -> storage -> nav -> dashboard -> practice hub ->
+   typing engine -> results/error analysis -> notebook -> progress ->
+   settings -> modals/metronome/keyboard map
+   ====================================================================== */
+
+/* ---------------------- CONTENT: PASSAGES ---------------------- */
+const PASSAGES = [
+{title:"Notice of Hearing", text:"The Registrar of this Court gives notice that the above-captioned matter shall be listed for hearing before the Hon'ble Bench on the date specified in the cause list circulated to the parties. The petitioner is directed to file an affidavit in support of the petition within a period of two weeks from the date of this order, and to serve a copy of the same upon the respondent through the office of the advocate on record. The respondent, upon receipt of such service, shall be at liberty to file a reply within a further period of two weeks, failing which the Court shall proceed to hear the matter on the basis of the material already available on record. It is further directed that all parties shall appear through counsel duly instructed and briefed on the facts of the case, so as to avoid unnecessary adjournment of the proceedings. The Registry is directed to place this matter on board along with connected applications, if any, for orders as deemed fit. Counsel for the petitioner submits that an interim injunction restraining the respondent from alienating the property in question is necessary pending final disposal of the suit, having regard to the balance of convenience and the possibility of irreparable harm should such relief not be granted."},
+{title:"Order on Interim Application", text:"Heard the learned counsel appearing for the applicant as well as the learned counsel representing the respondents. This is an application seeking interim relief pending the final disposal of the writ petition filed under Article 226 of the Constitution of India, whereby the petitioner has sought a writ of mandamus directing the concerned authority to process the pending representation within a stipulated time frame. It is submitted on behalf of the applicant that the representation has remained pending for an unreasonably long period despite repeated reminders, and that such inaction on the part of the authority has caused serious prejudice to the applicant's rights and legitimate expectations. Having considered the rival submissions and the material placed on record, this Court is inclined to direct the concerned authority to consider and dispose of the representation of the applicant, in accordance with law, within a period of eight weeks from the date of receipt of a copy of this order, by a reasoned and speaking order, after affording an opportunity of hearing to the applicant."},
+{title:"Recruitment Circular Excerpt", text:"Applications are invited from eligible candidates for appointment to the post of Junior Clerk in the establishment of this Court, on the terms and conditions specified in this circular. Candidates must possess a bachelor's degree from a recognised university, along with proficiency in English typing at a minimum speed as prescribed by the Registry, to be tested through a skill test conducted in paper to screen mode. Candidates should note that correction of typed text during the skill test shall not be permitted, and marks shall be awarded on the basis of both speed and accuracy, with due weightage given to the number of errors committed during the course of the test. Selected candidates shall be required to undergo a period of probation, during which their performance shall be reviewed periodically by the reporting authority, and confirmation in service shall be subject to satisfactory completion of such probation along with clearance of the prescribed departmental examination, where applicable."},
+{title:"Judgment Extract — Contractual Dispute", text:"This appeal arises out of a judgment and decree passed by the trial court, whereby the suit filed by the plaintiff for specific performance of an agreement to sell was decreed in favour of the plaintiff, and the defendant was directed to execute the sale deed upon receipt of the balance consideration within a period of two months from the date of the decree. The defendant, aggrieved by the said judgment, has preferred the present appeal, contending that the trial court erred in law and on facts in decreeing the suit, inasmuch as time was of the essence of the contract and the plaintiff had failed to tender the balance consideration within the period stipulated under the agreement. Having heard learned counsel for both parties and having perused the record of the trial court, including the oral evidence and the documents exhibited therein, this Court finds no perversity in the findings recorded by the trial court warranting interference in appeal. In the result, the appeal fails and is dismissed, with the judgment and decree of the trial court affirmed in its entirety."},
+{title:"Administrative Office Order", text:"In exercise of the powers conferred under the relevant rules governing the administration of this Court, and with the approval of the competent authority, it is hereby ordered that the office timings for all administrative branches shall stand revised with effect from the date mentioned below, until further orders. All members of the establishment are directed to strictly adhere to the revised timings, and any deviation without prior written permission from the reporting officer shall be viewed seriously and may attract appropriate disciplinary action in accordance with the applicable conduct rules. Heads of the respective branches are directed to maintain an attendance register in the prescribed format and to submit a monthly compliance report to the Registrar without fail. Employees proceeding on leave shall submit their applications sufficiently in advance, except in cases of genuine emergency, and shall ensure that pending work is duly handed over to a colleague nominated for the purpose, with a written note recording the status of such work."},
+{title:"On Judicial Review", text:"The power of judicial review vested in the constitutional courts flows from the basic scheme of the Constitution and cannot be taken away even by an amendment, since it forms part of the checks and balances that preserve the separation of powers between the legislature, the executive and the judiciary. Where a law or an executive action is found to travel beyond the limits of authority conferred by the Constitution, or is found to infringe a fundamental right guaranteed to the citizen, it is the duty of the constitutional court to strike down such law or action, however inconvenient that conclusion may be to the other organs of the State. This power is not exercised lightly, and the courts have consistently held that a presumption of constitutionality attaches to every enactment of the legislature, so that the burden lies upon the party challenging the validity of the law to demonstrate, with reasonable clarity, the manner in which the impugned provision transgresses constitutional limits. Judicial review is thus best understood not as an assertion of judicial supremacy but as an instrument for the preservation of constitutional supremacy, ensuring that no organ of the State, however popularly elected, may act in a manner inconsistent with the document from which its own authority is ultimately derived."},
+{title:"On Fundamental Rights", text:"The fundamental rights guaranteed under Part Three of the Constitution are not to be read in isolation from one another, but must be construed harmoniously, so that the right to equality before the law, the right to life and personal liberty, and the freedom of speech and expression together form a coherent scheme for the protection of individual dignity against arbitrary state action. The expression 'procedure established by law' has been interpreted by the courts to require that any procedure depriving a person of life or personal liberty must itself be fair, just and reasonable, and not fanciful, oppressive or arbitrary, thereby infusing into the guarantee a substantive content that goes beyond mere compliance with a validly enacted statute. It has further been held that the restrictions placed upon fundamental freedoms in the interest of public order, decency or morality must bear a reasonable and proximate relationship to the object sought to be achieved, and cannot be sustained merely on the ground that the legislature considered them expedient at the time of enactment. The State, in enacting any law that touches upon these guarantees, therefore carries the burden of establishing that the encroachment is the least restrictive means available to achieve a legitimate constitutional objective."},
+{title:"On Separation of Powers", text:"Although the Constitution does not, in express terms, enact a rigid separation of powers of the kind found in some other constitutional systems, it is well settled that the essential functions of the three organs of the State, namely the legislature, the executive and the judiciary, cannot be so blended as to destroy the identity of any one of them, nor can any organ be permitted to usurp the essential functions properly belonging to another. The legislature is entrusted with the function of enacting laws in accordance with the procedure prescribed by the Constitution, the executive is entrusted with the function of implementing those laws and conducting the general administration of the State, and the judiciary is entrusted with the function of interpreting the laws and adjudicating disputes arising thereunder, including disputes as to the validity of legislative and executive action measured against the touchstone of the Constitution. Any arrangement that permits one organ to encroach substantially upon the domain reserved for another organ would be inconsistent with this scheme, and would, if carried far enough, threaten the delicate equilibrium upon which constitutional governance under the Republic is founded."}
+];
+
+/* ---------------------- CONTENT: WORD LISTS ---------------------- */
+const SHORT_WORDS = ["the","of","and","that","to","it","is","in","for","on","as","by","with","at","this","be","or","which","are","was","have","from","not","but","an","he","his","they","you","we","which","been","were","their","its","than","then","such","upon"];
+const LEGAL_WORDS = ["petitioner","respondent","affidavit","jurisdiction","injunction","tribunal","honourable","decree","plaintiff","defendant","appellant","statute","litigation","adjournment","interlocutory","evidence","exhibit","testimony","counsel","registrar","notification","recruitment","probation","mandamus","certiorari","judgment","application","proceeding","disposal","annexure"];
+const LEGAL_PHRASES = [
+  "in the matter of the above petition",
+  "with reference to the above notification",
+  "as per the provisions of this act",
+  "subject to the condition that",
+  "in accordance with the rules framed",
+  "for the kind information of all concerned",
+  "the undersigned is directed to state",
+  "it is hereby ordered that",
+  "without prejudice to the rights of parties",
+  "pending further orders of this court"
+];
+const MOTIVATION_LINES = [
+  "Accuracy first. A clean 380 beats a fast 390 with 100 errors — every time, in this exam.",
+  "You don't need to type faster today. You need to type calmer. Speed follows calm.",
+  "One wrong letter is one word. It is never the whole passage. Keep going.",
+  "Rhythm beats speed. A steady, unbroken pace will always out-score frantic bursts.",
+  "The last paragraph is won in practice, not on exam day. Train the finish.",
+  "Short words like 'the', 'of', 'and' are where most marks quietly leak. Guard them."
+];
+const SCHEDULE = [
+  {day:"Monday", focus:"Accuracy drills — short connecting words + legal phrase chunking"},
+  {day:"Tuesday", focus:"High-frequency legal word drill + custom text practice"},
+  {day:"Wednesday", focus:"Timed mock (full 10 minutes, no backspace)"},
+  {day:"Thursday", focus:"Weak words practice + rhythm/metronome mode"},
+  {day:"Friday", focus:"Last-paragraph endurance mode + timed mock"},
+  {day:"Saturday", focus:"Full mock + detailed error review in Notebook"},
+  {day:"Sunday", focus:"Light rhythm practice only — let your hands rest"}
+];
+
+/* ---------------------- STORAGE ---------------------- */
+const LS = {
+  get(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  set(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+};
+let settings = LS.get('bhc_settings', {goalWpm:40, goalErr:25, goalAcc:95, theme:'light'});
+let history  = LS.get('bhc_history', []);
+let weakWords = LS.get('bhc_weakwords', {}); // word -> {count, last}
+
+function saveSettings(){ LS.set('bhc_settings', settings); }
+function saveHistory(){ LS.set('bhc_history', history); }
+function saveWeak(){ LS.set('bhc_weakwords', weakWords); }
+
+/* ---------------------- THEME ---------------------- */
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', settings.theme);
+  document.getElementById('themeToggle').textContent = settings.theme === 'dark' ? '☀️' : '🌙';
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+  saveSettings(); applyTheme();
+});
+applyTheme();
+
+/* ---------------------- NAV / TABS ---------------------- */
+const tabNames = ['dashboard','practice','notebook','progress','settings','results'];
+function showTab(name){
+  tabNames.forEach(t => document.getElementById('tab-'+t).classList.toggle('hidden', t !== name));
+  [...document.querySelectorAll('#tabs button')].forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  if(name === 'dashboard') renderDashboard();
+  if(name === 'notebook') renderNotebook();
+  if(name === 'progress') renderProgress();
+  if(name === 'settings') renderSettings();
+}
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tab]');
+  if(btn) showTab(btn.dataset.tab);
+});
+
+/* ====================================================================
+   DASHBOARD
+   ==================================================================== */
+function renderDashboard(){
+  document.getElementById('motivationLine').innerHTML =
+    '<b>Coach note —</b> ' + MOTIVATION_LINES[new Date().getDate() % MOTIVATION_LINES.length];
+  document.getElementById('todayTarget').textContent =
+    `Finish 400 words with ≤ ${settings.goalErr} errors, at ${settings.goalWpm}+ net WPM and ${settings.goalAcc}%+ accuracy.`;
+
+  const last = history[history.length - 1];
+  document.getElementById('dLastWpm').textContent = last ? last.net : '–';
+  document.getElementById('dLastErr').textContent = last ? last.errors : '–';
+  document.getElementById('dLastAcc').textContent = last ? last.acc + '%' : '–';
+  document.getElementById('dGoalWpm').textContent = settings.goalWpm;
+  document.getElementById('dGoalErr').textContent = settings.goalErr;
+  document.getElementById('dGoalAcc').textContent = settings.goalAcc;
+
+  const todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+  document.getElementById('scheduleList').innerHTML = SCHEDULE.map(s =>
+    `<li class="${s.day===todayName?'today':''}"><span>${s.day}</span><span>${s.focus}</span></li>`).join('');
+}
+document.getElementById('openBreathBtn').addEventListener('click', () => openBreathModal(null));
+document.getElementById('quickMockBtn').addEventListener('click', () => openBreathModal(() => startMock()));
+
+/* ====================================================================
+   PRACTICE HUB — mode cards
+   ==================================================================== */
+const MODES = [
+  {id:'mock', tag:'Exam Sim', title:'Timed Mock Test', desc:'Exactly 10 minutes, backspace forced off. The real test.', action: () => openBreathModal(() => startMock())},
+  {id:'custom', tag:'Custom', title:'Custom Text Practice', desc:'Paste any passage, or upload a PDF / .txt file, and drill it.', action: openCustomModal},
+  {id:'chunk', tag:'Chunking', title:'Legal Phrase Chunking', desc:'One legal phrase at a time, repeated 8–10 times, to build rhythm across whole phrases.', action: startChunking},
+  {id:'short', tag:'Accuracy', title:'Short Connecting Words Drill', desc:'"the / of / and / that / to / it" — where most of your errors currently live.', action: () => startWordDrill(SHORT_WORDS, 'Short Connecting Words Drill', 180)},
+  {id:'legal', tag:'Vocabulary', title:'High-Frequency Legal Words', desc:'petitioner, respondent, affidavit, jurisdiction and more — remove hesitation on long words.', action: () => startWordDrill(LEGAL_WORDS, 'High-Frequency Legal Words Drill', 180)},
+  {id:'endurance', tag:'Stamina', title:'Last Paragraph Endurance', desc:'Loops the closing section of a passage under a tight clock — trains you to finish strong.', action: startEndurance},
+  {id:'rhythm', tag:'Rhythm', title:'Finger Placement / Rhythm Mode', desc:'Keyboard finger map + metronome, for steady unbroken pace.', action: startRhythmMode},
+  {id:'weak', tag:'Personal', title:'My Weak Words', desc:'Auto-built drill from words you have actually mistyped in past sessions.', action: drillWeakWords},
+];
+document.getElementById('modeGrid').innerHTML = MODES.map(m =>
+  `<button class="mode-card" data-mode="${m.id}"><span class="tag">${m.tag}</span><h4>${m.title}</h4><p>${m.desc}</p></button>`
+).join('');
+document.getElementById('modeGrid').addEventListener('click', e => {
+  const card = e.target.closest('.mode-card');
+  if(!card) return;
+  const mode = MODES.find(m => m.id === card.dataset.mode);
+  if(mode) mode.action();
+});
+
+/* ====================================================================
+   TYPING ENGINE — shared by every mode
+   session = { text, durationSec (null = untimed), modeLabel, metronomeDefault, showKbMap }
+   ==================================================================== */
+let sess = null;
+
+function startSession(cfg){
+  sess = {
+    text: cfg.text,
+    modeLabel: cfg.modeLabel,
+    durationSec: cfg.durationSec || null,
+    remaining: cfg.durationSec || 0,
+    pos: 0,
+    correct: 0,
+    errors: 0,
+    charLog: new Array(cfg.text.length).fill(null), // {expected, typed, ok}
+    wordSpans: [], // {startIndex, endIndex, el}
+    startedAt: Date.now(),
+    finished: false,
+    metronomeOn: !!cfg.metronomeDefault,
+    metroTimer: null,
+    tickTimer: null
+  };
+  renderPassage(cfg.text);
+  document.getElementById('sessionModeLabel').textContent = cfg.modeLabel + (cfg.durationSec ? '' : ' — untimed, submit when ready');
+  document.getElementById('kbMap').classList.toggle('hidden', !cfg.showKbMap);
+  if(cfg.showKbMap) renderKeyboardMap();
+  document.getElementById('screen-session').classList.remove('hidden');
+  updateSessionStats();
+  const input = document.getElementById('typeInput');
+  input.value = ''; input.focus();
+  if(sess.metronomeOn) startMetronome(); else stopMetronome();
+  document.getElementById('metroDot').classList.toggle('beat', false);
+  sess.tickTimer = setInterval(sessionTick, 1000);
+}
+
+function renderPassage(text){
+  const box = document.getElementById('passageBox');
+  box.innerHTML = '';
+  sess.wordSpans = [];
+  const matches = text.match(/\S+\s*/g) || [];
+  let idx = 0;
+  matches.forEach(word => {
+    const wSpan = document.createElement('span');
+    wSpan.className = 'wword';
+    const start = idx;
+    [...word].forEach(ch => {
+      const cSpan = document.createElement('span');
+      cSpan.className = 'ch';
+      cSpan.dataset.index = idx;
+      cSpan.textContent = ch;
+      wSpan.appendChild(cSpan);
+      idx++;
+    });
+    box.appendChild(wSpan);
+    sess.wordSpans.push({start, end: idx, el: wSpan});
+  });
+  markCursor(0);
+}
+
+function markCursor(i){
+  const prev = document.querySelector('#passageBox .ch.cursor');
+  if(prev) prev.classList.remove('cursor');
+  const el = document.querySelector(`#passageBox .ch[data-index="${i}"]`);
+  if(el) el.classList.add('cursor');
+  const prevW = document.querySelector('#passageBox .wword.active-word');
+  if(prevW) prevW.classList.remove('active-word');
+  const w = sess.wordSpans.find(w => i >= w.start && i < w.end);
+  if(w) w.el.classList.add('active-word');
+}
+
+function sessionStats(){
+  const elapsedSec = Math.max(1, (Date.now() - sess.startedAt) / 1000);
+  const minutes = elapsedSec / 60;
+  const gross = (sess.pos / 5) / minutes;
+  const net = Math.max(0, gross - (sess.errors / minutes));
+  const acc = sess.pos > 0 ? (sess.correct / sess.pos) * 100 : 100;
+  return {gross, net, acc, elapsedSec};
+}
+
+function updateSessionStats(){
+  const s = sessionStats();
+  document.getElementById('sWpm').textContent = Math.round(s.net);
+  document.getElementById('sAcc').textContent = Math.round(s.acc) + '%';
+  document.getElementById('sErr').textContent = sess.errors;
+  const timerEl = document.getElementById('sTimer');
+  if(sess.durationSec){
+    timerEl.querySelector('.v').textContent = fmtTime(sess.remaining);
+    timerEl.classList.toggle('low', sess.remaining <= 30);
+  } else {
+    timerEl.querySelector('.v').textContent = fmtTime(Math.round(s.elapsedSec));
+    timerEl.classList.remove('low');
+  }
+}
+function fmtTime(s){ s=Math.max(0,Math.round(s)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+
+function sessionTick(){
+  if(!sess || sess.finished) return;
+  if(sess.durationSec){
+    sess.remaining--;
+    if(sess.remaining <= 0){ updateSessionStats(); finishSession('time'); return; }
+  }
+  updateSessionStats();
+}
+
+function processChar(ch){
+  if(!sess || sess.finished || sess.pos >= sess.text.length) return;
+  const expected = sess.text[sess.pos];
+  const el = document.querySelector(`#passageBox .ch[data-index="${sess.pos}"]`);
+  const ok = ch === expected;
+  sess.charLog[sess.pos] = {expected, typed: ch, ok};
+  if(ok){ sess.correct++; if(el) el.classList.add('correct'); }
+  else{
+    sess.errors++;
+    if(el) el.classList.add('incorrect');
+    if(/[a-zA-Z]/.test(expected)) registerWeakChar(expected);
+  }
+  sess.pos++;
+  updateSessionStats();
+  if(sess.pos >= sess.text.length){ finishSession('complete'); }
+  else{
+    markCursor(sess.pos);
+    const nextEl = document.querySelector(`#passageBox .ch[data-index="${sess.pos}"]`);
+    if(nextEl) nextEl.scrollIntoView({block:'nearest', inline:'nearest'});
+  }
+}
+function registerWeakChar(ch){ /* character-level tracking folded into word-level weak words at finish */ }
+
+const typeInput = document.getElementById('typeInput');
+const flashWarn = document.getElementById('flashWarn');
+let flashT = null;
+function showFlash(){ flashWarn.classList.add('show'); clearTimeout(flashT); flashT=setTimeout(()=>flashWarn.classList.remove('show'),800); }
+
+typeInput.addEventListener('keydown', e => {
+  if(!sess || sess.finished) return;
+  if(e.key === 'Backspace' || e.key === 'Delete'){ e.preventDefault(); showFlash(); return; }
+  if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); return; }
+});
+typeInput.addEventListener('beforeinput', e => {
+  if(e.inputType && e.inputType.startsWith('delete')){ e.preventDefault(); showFlash(); }
+});
+typeInput.addEventListener('input', () => {
+  const val = typeInput.value;
+  if(!val.length) return;
+  [...val].forEach(ch => processChar(ch));
+  typeInput.value = '';
+});
+document.getElementById('passageBox').addEventListener('click', () => typeInput.focus());
+document.getElementById('exitSessionBtn').addEventListener('click', () => closeSession());
+document.getElementById('submitSessionBtn').addEventListener('click', () => finishSession('manual'));
+document.getElementById('focusToggle').addEventListener('click', () => document.body.classList.toggle('focus-mode'));
+
+function closeSession(){
+  clearInterval(sess && sess.tickTimer);
+  stopMetronome();
+  document.getElementById('screen-session').classList.add('hidden');
+  document.body.classList.remove('focus-mode');
+  sess = null;
+}
+
+/* ---------------------- METRONOME (Web Audio) ---------------------- */
+let audioCtx = null;
+function beep(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.frequency.value = 880; osc.type='sine';
+    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+  }catch(e){}
+  const dot = document.getElementById('metroDot');
+  dot.classList.add('beat'); setTimeout(()=>dot.classList.remove('beat'), 100);
+}
+function startMetronome(bpm){
+  bpm = bpm || 200; // ticks per minute ~ roughly 3-4 keystrokes/sec pace guide
+  stopMetronome();
+  sess.metroTimer = setInterval(beep, Math.round(60000 / bpm));
+}
+function stopMetronome(){ if(sess && sess.metroTimer) clearInterval(sess.metroTimer); if(sess) sess.metroTimer=null; }
+document.getElementById('metroToggle').addEventListener('click', () => {
+  if(!sess) return;
+  sess.metronomeOn = !sess.metronomeOn;
+  if(sess.metronomeOn) startMetronome(); else stopMetronome();
+});
+
+/* ---------------------- KEYBOARD FINGER MAP ---------------------- */
+const KB_ROWS = [
+  [["1","f-left-pinky"],["2","f-left-ring"],["3","f-left-middle"],["4","f-left-index"],["5","f-left-index"],["6","f-right-index"],["7","f-right-index"],["8","f-right-middle"],["9","f-right-ring"],["0","f-right-pinky"]],
+  [["Q","f-left-pinky"],["W","f-left-ring"],["E","f-left-middle"],["R","f-left-index"],["T","f-left-index"],["Y","f-right-index"],["U","f-right-index"],["I","f-right-middle"],["O","f-right-ring"],["P","f-right-pinky"]],
+  [["A","f-left-pinky"],["S","f-left-ring"],["D","f-left-middle"],["F","f-left-index"],["G","f-left-index"],["H","f-right-index"],["J","f-right-index"],["K","f-right-middle"],["L","f-right-ring"],[";","f-right-pinky"]],
+  [["Z","f-left-pinky"],["X","f-left-ring"],["C","f-left-middle"],["V","f-left-index"],["B","f-left-index"],["N","f-right-index"],["M","f-right-index"],[",","f-right-middle"],[".","f-right-ring"],["/","f-right-pinky"]]
+];
+function renderKeyboardMap(){
+  const wrap = document.getElementById('kbMap');
+  wrap.innerHTML = '';
+  KB_ROWS.forEach(row => {
+    const r = document.createElement('div'); r.className='kb-row';
+    row.forEach(([label,cls]) => {
+      const k = document.createElement('div'); k.className='kb-key '+cls; k.textContent=label; r.appendChild(k);
+    });
+    wrap.appendChild(r);
+  });
+}
+
+/* ====================================================================
+   MODE LAUNCHERS
+   ==================================================================== */
+function startMock(){
+  const p = PASSAGES[Math.floor(Math.random()*PASSAGES.length)];
+  showTab('practice');
+  startSession({text:p.text, modeLabel:'Timed Mock — '+p.title, durationSec:600});
+}
+/* ---------------------- Custom passage: paste, upload PDF, or upload .txt ---------------------- */
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let text = '';
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + ' ';
+  }
+  return text.replace(/\s+/g, ' ').trim();
+}
+function openCustomModal(){
+  document.getElementById('customPassageText').value = '';
+  document.getElementById('pdfStatus').textContent = '';
+  document.getElementById('passageFile').value = '';
+  document.getElementById('customModal').classList.remove('hidden');
+}
+document.getElementById('cancelCustomBtn').addEventListener('click', () => document.getElementById('customModal').classList.add('hidden'));
+document.getElementById('passageFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const status = document.getElementById('pdfStatus');
+  status.textContent = 'Reading file…';
+  try{
+    let text = '';
+    if(file.name.toLowerCase().endsWith('.pdf')){
+      if(!window.pdfjsLib) throw new Error('pdf library unavailable');
+      text = await extractPdfText(file);
+    } else {
+      text = await file.text();
+    }
+    text = text.trim();
+    if(!text){ status.textContent = 'No selectable text found in that file — try pasting instead (scanned/image PDFs cannot be read this way).'; return; }
+    document.getElementById('customPassageText').value = text;
+    const wc = text.split(/\s+/).filter(Boolean).length;
+    status.textContent = `Loaded ${wc} words from ${file.name}. Edit below if needed.`;
+  }catch(err){
+    status.textContent = 'Could not read that file. Try pasting the text instead.';
+  }
+});
+document.getElementById('useCustomBtn').addEventListener('click', () => {
+  const text = document.getElementById('customPassageText').value.trim();
+  if(text.length < 10){ alert('Paste or upload a passage first — at least a few words.'); return; }
+  document.getElementById('customModal').classList.add('hidden');
+  showTab('practice');
+  startSession({text, modeLabel:'Custom Text Practice', durationSec:null});
+});
+function startChunking(){
+  const picks = shuffle([...LEGAL_PHRASES]).slice(0,4);
+  const text = picks.map(ph => Array(9).fill(ph).join(' ')).join('  ');
+  showTab('practice');
+  startSession({text, modeLabel:'Legal Phrase Chunking (each phrase ×9)', durationSec:null});
+}
+function startWordDrill(list, label, durationSec){
+  const words = [];
+  for(let i=0;i<8;i++) words.push(...shuffle([...list]));
+  const text = words.join(' ');
+  showTab('practice');
+  startSession({text, modeLabel:label, durationSec});
+}
+function startEndurance(){
+  const p = PASSAGES[Math.floor(Math.random()*PASSAGES.length)];
+  const words = p.text.split(' ');
+  const ending = words.slice(Math.max(0, words.length-55)).join(' ');
+  const text = ending + '  ' + ending;
+  showTab('practice');
+  startSession({text, modeLabel:'Last Paragraph Endurance — '+p.title, durationSec:180});
+}
+function startRhythmMode(){
+  const p = PASSAGES[Math.floor(Math.random()*PASSAGES.length)];
+  const words = p.text.split(' ').slice(0,90).join(' ');
+  showTab('practice');
+  startSession({text:words, modeLabel:'Finger Placement / Rhythm Mode', durationSec:null, metronomeDefault:true, showKbMap:true});
+}
+function drillWeakWords(){
+  const top = Object.entries(weakWords).sort((a,b)=>b[1].count-a[1].count).slice(0,15);
+  if(!top.length){ alert('No weak words logged yet — complete a mock or drill first.'); return; }
+  const words = [];
+  top.forEach(([w]) => { for(let i=0;i<5;i++) words.push(w); });
+  const text = shuffle(words).join(' ');
+  showTab('practice');
+  startSession({text, modeLabel:'My Weak Words Drill', durationSec:null});
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+/* ====================================================================
+   WORD-LEVEL DIFF ENGINE
+   Reconstructs exactly what was typed (from charLog) and aligns it
+   against the expected passage word-by-word (LCS-based diff), so we
+   can classify every word as correct / wrong (misspelled) / missing
+   (never produced) / extra (a stray keystroke split one word in two).
+   ==================================================================== */
+function normWord(w){ return (w||'').toLowerCase().replace(/[^a-z']/g,''); }
+
+function diffWords(expected, typed){
+  const n = expected.length, m = typed.length;
+  const dp = Array.from({length:n+1}, () => new Array(m+1).fill(0));
+  for(let i=1;i<=n;i++){
+    for(let j=1;j<=m;j++){
+      dp[i][j] = normWord(expected[i-1]) === normWord(typed[j-1])
+        ? dp[i-1][j-1] + 1
+        : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  const ops = [];
+  let i = n, j = m;
+  while(i > 0 && j > 0){
+    if(normWord(expected[i-1]) === normWord(typed[j-1])){ ops.push({type:'equal', a:expected[i-1], b:typed[j-1]}); i--; j--; }
+    else if(dp[i-1][j] >= dp[i][j-1]){ ops.push({type:'missing', a:expected[i-1]}); i--; }
+    else{ ops.push({type:'extra', b:typed[j-1]}); j--; }
+  }
+  while(i > 0){ ops.push({type:'missing', a:expected[--i]}); }
+  while(j > 0){ ops.push({type:'extra', b:typed[--j]}); }
+  ops.reverse();
+  // merge an adjacent missing+extra pair into a single "wrong" (misspelled) word,
+  // rather than reporting a dropped word and a stray fragment separately
+  const merged = [];
+  for(let k=0; k<ops.length; k++){
+    const cur = ops[k], nxt = ops[k+1];
+    if(cur && nxt && ((cur.type==='missing' && nxt.type==='extra') || (cur.type==='extra' && nxt.type==='missing'))){
+      const a = cur.type==='missing' ? cur.a : nxt.a;
+      const b = cur.type==='extra' ? cur.b : nxt.b;
+      merged.push({type:'wrong', a, b});
+      k++;
+    } else merged.push(cur);
+  }
+  return merged;
+}
+
+function analyzeWords(){
+  const attemptedExpected = sess.text.slice(0, sess.pos).split(/\s+/).filter(Boolean);
+  const attemptedTyped = sess.charLog.slice(0, sess.pos).map(l => l ? l.typed : '').join('').split(/\s+/).filter(Boolean);
+  const ops = diffWords(attemptedExpected, attemptedTyped);
+  const wrongWords = [], missingWords = [], extraWords = [];
+  let correctWords = 0;
+  ops.forEach(op => {
+    if(op.type === 'equal') correctWords++;
+    else if(op.type === 'wrong') wrongWords.push({expected: op.a, typed: op.b});
+    else if(op.type === 'missing') missingWords.push(op.a);
+    else if(op.type === 'extra') extraWords.push(op.b);
+  });
+  // words beyond the point we reached at all (time ran out / submitted early)
+  sess.text.slice(sess.pos).split(/\s+/).filter(Boolean).forEach(w => missingWords.push(w));
+  const totalWords = sess.text.split(/\s+/).filter(Boolean).length;
+  return {wrongWords, missingWords, extraWords, correctWords, wordsAttempted: attemptedExpected.length, totalWords};
+}
+
+/* ====================================================================
+   FINISH SESSION -> ERROR ANALYSIS -> RESULTS
+   ==================================================================== */
+function finishSession(reason){
+  if(!sess || sess.finished) return;
+  sess.finished = true;
+  clearInterval(sess.tickTimer);
+  stopMetronome();
+
+  const s = sessionStats();
+  const gross = Math.round(s.gross), net = Math.round(s.net), acc = Math.round(s.acc*10)/10;
+  const wa = analyzeWords();
+
+  wa.wrongWords.forEach(w => {
+    const key = normWord(w.expected);
+    if(key){ weakWords[key] = weakWords[key] || {count:0,last:null}; weakWords[key].count++; weakWords[key].last = new Date().toISOString(); }
+  });
+  saveWeak();
+
+  const attempt = {
+    id: Date.now(), date: new Date().toISOString(), mode: sess.modeLabel,
+    wordsTyped: wa.wordsAttempted, totalWords: wa.totalWords,
+    gross, net, acc, errors: sess.errors,
+    totalKeystrokes: sess.text.length, typedKeystrokes: sess.pos,
+    correctKeystrokes: sess.correct, wrongKeystrokes: sess.errors,
+    finished: sess.pos >= sess.text.length,
+    wrongWords: wa.wrongWords.slice(0,80), missingWords: wa.missingWords.slice(0,80), extraWords: wa.extraWords.slice(0,80)
+  };
+  history.push(attempt);
+  if(history.length > 200) history = history.slice(-200);
+  saveHistory();
+
+  renderResults(attempt);
+  closeSession();
+  showTab('results');
+}
+
+function renderResults(a){
+  document.getElementById('resultsTitle').textContent = a.mode + ' — Result';
+  const cells = [
+    {k:'Gross WPM', v:a.gross},
+    {k:'Net WPM', v:a.net, cls: a.net>=settings.goalWpm?'good':'bad'},
+    {k:'Accuracy', v:a.acc+'%', cls: a.acc>=settings.goalAcc?'good':'bad'},
+    {k:'Errors', v:a.errors, cls: a.errors<=settings.goalErr?'good':'bad'},
+    {k:'Words Typed', v:`${a.wordsTyped}/${a.totalWords}`},
+    {k:'Finished?', v: a.finished ? 'Yes' : 'No', cls: a.finished?'good':'bad'},
+  ];
+  document.getElementById('resultDocket').innerHTML = cells.map(c=>`<div class="dcell"><div class="v ${c.cls||''}">${c.v}</div><div class="k">${c.k}</div></div>`).join('');
+
+  const kCells = [
+    {k:'Passage Keystrokes', v:a.totalKeystrokes},
+    {k:'Typed Keystrokes', v:a.typedKeystrokes},
+    {k:'Correct Keystrokes', v:a.correctKeystrokes, cls:'good'},
+    {k:'Wrong Keystrokes', v:a.wrongKeystrokes, cls: a.wrongKeystrokes>0 ? 'bad':'good'},
+  ];
+  document.getElementById('keystrokeDocket').innerHTML = kCells.map(c=>`<div class="dcell"><div class="v ${c.cls||''}">${c.v}</div><div class="k">${c.k}</div></div>`).join('');
+
+  const wwCard = document.getElementById('wrongWordsCard');
+  wwCard.innerHTML = a.wrongWords.length
+    ? a.wrongWords.map(w => `<span class="wordchip">${escapeHtml(w.expected)}<small>typed: ${escapeHtml(w.typed || '(blank)')}</small></span>`).join('')
+    : '<span class="sub">None — clean run.</span>';
+
+  const mwCard = document.getElementById('missingWordsCard');
+  mwCard.innerHTML = a.missingWords.length
+    ? a.missingWords.map(w => `<span class="wordchip missing">${escapeHtml(w)}</span>`).join('')
+    : '<span class="sub">None — you finished the passage.</span>';
+
+  const ewCard = document.getElementById('extraWordsCard');
+  ewCard.innerHTML = a.extraWords.length
+    ? a.extraWords.map(w => `<span class="wordchip missing">${escapeHtml(w)}</span>`).join('')
+    : '<span class="sub">None.</span>';
+
+  document.getElementById('coachNotes').innerHTML = generateCoachNotes(a).map(n=>`<li>${n}</li>`).join('');
+}
+
+function generateCoachNotes(a){
+  const notes = [];
+
+  // Keystroke-level summary first — grounds every other note in the raw numbers
+  const kAcc = a.typedKeystrokes > 0 ? Math.round((a.correctKeystrokes / a.typedKeystrokes) * 1000) / 10 : 100;
+  notes.push(`Of ${a.totalKeystrokes} keystrokes in the full passage, you attempted ${a.typedKeystrokes} (${Math.round((a.typedKeystrokes/a.totalKeystrokes)*100)}%): ${a.correctKeystrokes} correct and ${a.wrongKeystrokes} wrong — a keystroke accuracy of ${kAcc}%.`);
+
+  if(a.acc < settings.goalAcc){
+    notes.push(`Character accuracy is ${a.acc}%, below your ${settings.goalAcc}% target. Since backspace stays off, every rushed letter becomes a permanent error — the single best fix is reading one full word ahead of your fingers rather than letter-by-letter.`);
+  } else {
+    notes.push(`Character accuracy of ${a.acc}% clears your target. Keep this discipline while you push speed.`);
+  }
+
+  if(a.net < settings.goalWpm){
+    notes.push(`Net speed is ${a.net} WPM, below your ${settings.goalWpm} WPM goal. Repeat this same passage once more today — familiarity with the exact wording is often worth more than fresh material at this stage.`);
+  } else {
+    notes.push(`Net speed of ${a.net} WPM already clears your goal — hold this pace across a full 400-word passage before raising the target further.`);
+  }
+
+  if(a.wrongWords.length){
+    notes.push(`${a.wrongWords.length} word(s) came out misspelled. These are the words now added to your Weak Words notebook — drill them there specifically rather than re-typing the whole passage blind.`);
+  }
+
+  if(a.extraWords.length){
+    notes.push(`${a.extraWords.length} stray word-fragment(s) appeared in what you typed — almost always an accidental space struck in the middle of a word, splitting it into two typed tokens. Watch your spacing thumb specifically on long legal words.`);
+  }
+
+  if(a.missingWords.length > 0){
+    if(!a.finished){
+      notes.push(`${a.missingWords.length} word(s) were never typed at all, mostly because time ran out before you reached them. This is a pacing problem, not an accuracy problem — Last Paragraph Endurance mode trains exactly this.`);
+    } else {
+      notes.push(`${a.missingWords.length} word(s) were effectively skipped mid-passage (usually a missing space merging two words into one typed block). Slow down fractionally at word boundaries rather than the letters themselves.`);
+    }
+  }
+
+  const shortMissed = a.wrongWords.filter(w => SHORT_WORDS.includes(normWord(w.expected))).length;
+  if(shortMissed >= 2){
+    notes.push(`${shortMissed} of your wrong words were short connecting words (the, of, and, that, to...). These are typed almost on autopilot — slow down fractionally on them rather than speeding up, since autopilot is exactly where slips creep in.`);
+  }
+
+  const prev = history[history.length - 2];
+  if(prev){
+    const dErr = a.errors - prev.errors;
+    if(dErr < 0) notes.push(`Errors dropped by ${Math.abs(dErr)} compared with your previous attempt — that trend matters more than any single WPM number.`);
+    else if(dErr > 0) notes.push(`Errors rose by ${dErr} compared with your previous attempt. If this follows a long practice block, it may simply be fatigue — a short break before your next attempt is a reasonable response.`);
+  }
+  return notes;
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+document.getElementById('resultsRetryBtn').addEventListener('click', () => showTab('practice'));
+document.getElementById('resultsExportBtn').addEventListener('click', () => {
+  const a = history[history.length-1];
+  exportText(formatAttemptText(a), `bhc-result-${a.id}.txt`);
+});
+
+function formatAttemptText(a){
+  return [
+    `BHC Clerk Typing Coach — Result Export`,
+    `Mode: ${a.mode}`,
+    `Date: ${new Date(a.date).toLocaleString()}`,
+    `Gross WPM: ${a.gross}  Net WPM: ${a.net}  Accuracy: ${a.acc}%  Errors: ${a.errors}`,
+    `Words Typed: ${a.wordsTyped}/${a.totalWords}  Finished: ${a.finished ? 'Yes':'No'}`,
+    `Keystrokes — Passage: ${a.totalKeystrokes}  Typed: ${a.typedKeystrokes}  Correct: ${a.correctKeystrokes}  Wrong: ${a.wrongKeystrokes}`,
+    ``,
+    `Wrong Words:`,
+    a.wrongWords.length ? a.wrongWords.map(w=>`  - ${w.expected} (typed: ${w.typed||'(blank)'})`).join('\n') : '  none',
+    ``,
+    `Missing Words:`,
+    a.missingWords.length ? a.missingWords.map(w=>`  - ${w}`).join('\n') : '  none',
+    ``,
+    `Extra Words:`,
+    a.extraWords.length ? a.extraWords.map(w=>`  - ${w}`).join('\n') : '  none'
+  ].join('\n');
+}
+function exportText(content, filename){
+  const blob = new Blob([content], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ====================================================================
+   NOTEBOOK
+   ==================================================================== */
+function renderNotebook(){
+  const entries = Object.entries(weakWords).sort((a,b)=>b[1].count-a[1].count);
+  const list = document.getElementById('weakList');
+  list.innerHTML = entries.length
+    ? entries.map(([w,d]) => `<div class="weakword-row"><span>${escapeHtml(w)}</span><span class="cnt">${d.count}×</span></div>`).join('')
+    : '<span class="sub">No weak words yet — complete a mock or drill to start building this list.</span>';
+}
+document.getElementById('drillWeakBtn').addEventListener('click', drillWeakWords);
+document.getElementById('clearWeakBtn').addEventListener('click', () => {
+  if(confirm('Clear your entire weak words list?')){ weakWords = {}; saveWeak(); renderNotebook(); }
+});
+document.getElementById('addPasteBtn').addEventListener('click', () => {
+  const raw = document.getElementById('pasteWords').value;
+  const words = raw.split(/[,\n]/).map(w=>w.trim().toLowerCase().replace(/[^a-z']/g,'')).filter(Boolean);
+  words.forEach(w => { weakWords[w] = weakWords[w] || {count:0,last:null}; weakWords[w].count++; weakWords[w].last = new Date().toISOString(); });
+  saveWeak();
+  document.getElementById('pasteWords').value = '';
+  renderNotebook();
+});
+
+/* ====================================================================
+   PROGRESS
+   ==================================================================== */
+function renderProgress(){
+  document.getElementById('pGoalErr').textContent = settings.goalErr;
+  const last = history[history.length-1];
+  if(last){
+    const pct = Math.max(0, Math.min(100, 100 - ((last.errors - settings.goalErr) / settings.goalErr) * 100));
+    document.getElementById('goalFill').style.width = Math.max(4,Math.min(100,pct)) + '%';
+    document.getElementById('goalProgressText').textContent =
+      last.errors <= settings.goalErr
+        ? `Last mock: ${last.errors} errors — goal met.`
+        : `Last mock: ${last.errors} errors — ${last.errors - settings.goalErr} above your ≤${settings.goalErr} goal.`;
+  } else {
+    document.getElementById('goalFill').style.width = '0%';
+    document.getElementById('goalProgressText').textContent = 'No mocks recorded yet.';
+  }
+
+  const last10 = history.slice(-10);
+  const maxWpm = Math.max(10, ...last10.map(h=>h.net));
+  document.getElementById('wpmBars').innerHTML = last10.map(h => `
+    <div class="barcol">
+      <div class="bar" style="height:${Math.max(4,(h.net/maxWpm)*80)}px" title="Net WPM ${h.net}"></div>
+      <div class="bar acc" style="height:${Math.max(4,(h.acc/100)*30)}px" title="Accuracy ${h.acc}%"></div>
+      <div class="lbl">${new Date(h.date).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
+    </div>`).join('') || '<span class="sub">No data yet.</span>';
+
+  const rows = history.slice(-10).reverse().map(h => `
+    <tr><td>${new Date(h.date).toLocaleDateString()}</td><td>${h.mode}</td><td>${h.wordsTyped}/${h.totalWords}</td>
+    <td>${h.errors}</td><td>${h.acc}%</td><td>${h.finished?'Yes':'No'}</td></tr>`).join('');
+  document.getElementById('histTable').innerHTML =
+    `<tr><th>Date</th><th>Mode</th><th>Words</th><th>Errors</th><th>Accuracy</th><th>Finished</th></tr>` + rows;
+}
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const content = history.map(formatAttemptText).join('\n\n' + '='.repeat(40) + '\n\n');
+  exportText(content || 'No history yet.', 'bhc-typing-history.txt');
+});
+
+/* ====================================================================
+   SETTINGS
+   ==================================================================== */
+function renderSettings(){
+  document.getElementById('setGoalWpm').value = settings.goalWpm;
+  document.getElementById('setGoalErr').value = settings.goalErr;
+  document.getElementById('setGoalAcc').value = settings.goalAcc;
+}
+document.getElementById('saveGoalsBtn').addEventListener('click', () => {
+  settings.goalWpm = parseInt(document.getElementById('setGoalWpm').value,10) || 40;
+  settings.goalErr = parseInt(document.getElementById('setGoalErr').value,10) || 25;
+  settings.goalAcc = parseInt(document.getElementById('setGoalAcc').value,10) || 95;
+  saveSettings();
+  alert('Goals saved.');
+});
+document.getElementById('resetAllBtn').addEventListener('click', () => {
+  if(confirm('This permanently deletes all history, weak words and goals from this browser. Continue?')){
+    localStorage.removeItem('bhc_settings'); localStorage.removeItem('bhc_history'); localStorage.removeItem('bhc_weakwords');
+    settings = {goalWpm:40, goalErr:25, goalAcc:95, theme:settings.theme}; history = []; weakWords = {};
+    saveSettings(); saveHistory(); saveWeak();
+    showTab('dashboard');
+  }
+});
+
+/* ====================================================================
+   BREATHING MODAL
+   ==================================================================== */
+let breathCallback = null;
+function openBreathModal(cb){
+  breathCallback = cb;
+  document.getElementById('breathModal').classList.remove('hidden');
+}
+function closeBreathModal(run){
+  document.getElementById('breathModal').classList.add('hidden');
+  if(run && breathCallback) breathCallback();
+  breathCallback = null;
+}
+document.getElementById('skipBreathBtn').addEventListener('click', () => closeBreathModal(true));
+document.getElementById('doneBreathBtn').addEventListener('click', () => closeBreathModal(true));
+
+/* ---------------------- INIT ---------------------- */
+renderDashboard();
+showTab('dashboard');
+</script>
+</body>
+</html>
